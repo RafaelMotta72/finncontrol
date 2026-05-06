@@ -27,16 +27,35 @@ def get_db():
 # Rota para criar uma nova transação (CRUD - Create)
 @app.post("/transactions")
 def create_transaction(transaction: schemas.TransactionCreate, db: Session = Depends(get_db)):
+    type_map = {
+            "receita": "income",
+            "r": "income",
+            "despesa": "expense",
+            "d": "expense"
+        }
+
+    user_type = transaction.type.lower()
+
+    if user_type not in type_map:
+            raise HTTPException(status_code=400, detail="Tipo inválido")
+
+    normalized_type = type_map[user_type]
 
     category = db.query(models.Category).filter(models.Category.id == transaction.category_id).first()
 
     if not category:
         raise HTTPException(status_code=400, detail="Categoria inválida")
+    
+    if category.type != normalized_type:
+        raise HTTPException(
+            status_code=400,
+            detail="Categoria não corresponde ao tipo da transação"
+        )
 
     new_transaction = models.Transaction(
         description=transaction.description,
         amount=transaction.amount,
-        type=transaction.type,
+        type=normalized_type,
         category_id=transaction.category_id
     )
 
@@ -77,9 +96,17 @@ def update_transaction(
     if not transaction:
         raise HTTPException(status_code=404, detail="Transação não encontrada")
 
+     # valida categoria
+    category = db.query(models.Category).filter(models.Category.id == updated_data.category_id).first()
+
+    if not category:
+        raise HTTPException(status_code=400, detail="Categoria inválida")
+
+
     transaction.description = updated_data.description
     transaction.amount = updated_data.amount
     transaction.type = updated_data.type
+    transaction.category_id = updated_data.category_id
 
     db.commit()
     db.refresh(transaction)
@@ -105,12 +132,18 @@ def delete_transaction(transaction_id: int, db: Session = Depends(get_db)):
 @app.post("/categories")
 def create_category(category: schemas.CategoryCreate, db: Session = Depends(get_db)):
 
-    new_category = models.Category(name=category.name)
+      # normalização
+    name = category.name.strip().lower().capitalize()
 
-    existing = db.query(models.Category).filter(models.Category.name == category.name).first()
+    existing = db.query(models.Category).filter(models.Category.name == name).first()
 
     if existing:
         raise HTTPException(status_code=400, detail="Categoria já existe")
+    
+    new_category = models.Category(
+        name=name,
+        type=category.type
+    )
 
     db.add(new_category)
     db.commit()
@@ -119,12 +152,17 @@ def create_category(category: schemas.CategoryCreate, db: Session = Depends(get_
     return new_category
 
 def create_default_categories(db: Session):
-    default_categories = ["alimentação", "transporte", "lazer"]
+    default_categories = [
+    {"name": "Alimentação", "type": "expense"},
+    {"name": "Transporte", "type": "expense"},
+    {"name": "Lazer", "type": "expense"},
+    {"name": "Salário", "type": "income"},
+]
 
-    for name in default_categories:
-        exists = db.query(models.Category).filter(models.Category.name == name).first()
+    for cat in default_categories:
+        exists = db.query(models.Category).filter(models.Category.name == cat["name"]).first()
         if not exists:
-            db.add(models.Category(name=name))
+            db.add(models.Category(name=cat["name"], type=cat["type"]))
 
     db.commit()
 
@@ -133,6 +171,50 @@ def create_default_categories(db: Session):
 def get_categories(db: Session = Depends(get_db)):
     return db.query(models.Category).all()
 
+
+# Métodos de consulta
+@app.get("/balance")
+def get_balance(db: Session = Depends(get_db)):
+
+    transactions = db.query(models.Transaction).all()
+
+    total_income = 0
+    total_expense = 0
+
+    for t in transactions:
+        if t.type == "income":
+            total_income += t.amount
+        elif t.type == "expense":
+            total_expense += t.amount
+
+    balance = total_income - total_expense
+
+    return {
+        "Receita": total_income,
+        "Despesa": total_expense,
+        "Saldo": balance
+    }
+
+@app.get("/balance/category")
+def balance_by_category(db: Session = Depends(get_db)):
+
+    transactions = db.query(models.Transaction).all()
+
+    result = {}
+
+    for t in transactions:
+        # ignora receitas
+        if t.type != "expense":
+            continue
+
+        category_name = t.category.name if t.category else "Sem categoria"
+
+        if category_name not in result:
+            result[category_name] = 0
+
+        result[category_name] += t.amount
+
+    return result
 
 @app.on_event("startup")
 def startup():

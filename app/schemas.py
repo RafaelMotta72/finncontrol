@@ -13,6 +13,7 @@ class TransactionUpdate(BaseModel):
     description: str
     amount: float
     type: str
+    category_id: int
 
 # 
 class CategoryCreate(BaseModel):
