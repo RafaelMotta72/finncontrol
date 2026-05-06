@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinnControl</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <h1>FinnControl </h1>
+
+    <h2>Saldo</h2>
+    <p id="balance"></p>
+
+    <h2>Adicionar Transação</h2>
+
+    <input id="description" placeholder="Descrição">
+    <input id="amount" type="number" placeholder="Valor">
+
+    <select id="type" onchange="loadCategoriesByType()">
+        <option value="receita">Receita</option>
+        <option value="despesa">Despesa</option>
+    </select>
+
+    <select id="category"></select>
+
+    <button onclick="addTransaction()">Adicionar</button>
+
+    <h2>Transações</h2>
+    <ul id="list"></ul>
+
+    <script src="script.js"></script>
+</body>
+</html>

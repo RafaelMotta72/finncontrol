@@ -1,12 +1,19 @@
 from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
-
+from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base, SessionLocal
 from app import models, schemas
 from fastapi import HTTPException
 
 # Cria a API usando FastAPI
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5500"],  # modo desenvolvimento
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # cria tabelas no banco automaticamente
 Base.metadata.create_all(bind=engine)
@@ -190,8 +197,8 @@ def get_balance(db: Session = Depends(get_db)):
     balance = total_income - total_expense
 
     return {
-        "Receita": total_income,
-        "Despesa": total_expense,
+        "Receitas": total_income,
+        "Despesas": total_expense,
         "Saldo": balance
     }
 
