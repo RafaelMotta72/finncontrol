@@ -5,25 +5,21 @@ from app.database import engine, Base, SessionLocal
 from app import models, schemas
 from fastapi import HTTPException
 
-# Cria a API usando FastAPI
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5500"],  # modo desenvolvimento
+    allow_origins=["http://localhost:5500"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# cria tabelas no banco automaticamente
 Base.metadata.create_all(bind=engine)
 
-# Define o que a rota raiz ("/") deve retornar, se feito um método GET 
 @app.get("/")
 def read_root():
     return {"mensagem": "API rodando com banco de dados!"}
 
-# Função para obter uma sessão de banco de dados
 def get_db():
     db = SessionLocal()
     try:
@@ -31,7 +27,6 @@ def get_db():
     finally:
         db.close()
 
-# Rota para criar uma nova transação (CRUD - Create)
 @app.post("/transactions")
 def create_transaction(transaction: schemas.TransactionCreate, db: Session = Depends(get_db)):
     type_map = {
@@ -72,7 +67,6 @@ def create_transaction(transaction: schemas.TransactionCreate, db: Session = Dep
 
     return new_transaction
 
-# Rota para listar todas as transações (CRUD - Read)
 @app.get("/transactions")
 def get_transactions(db: Session = Depends(get_db)):
     transactions = db.query(models.Transaction).all()
@@ -89,8 +83,6 @@ def get_transactions(db: Session = Depends(get_db)):
 
     return result
 
-
-# Rota para atualizar uma transação por ID (CRUD - Update)
 @app.put("/transactions/{transaction_id}")
 def update_transaction(
     transaction_id: int,
@@ -120,8 +112,6 @@ def update_transaction(
 
     return transaction
 
-
-# Rota para deletar uma transação por ID (CRUD - Delete)
 @app.delete("/transactions/{transaction_id}")
 def delete_transaction(transaction_id: int, db: Session = Depends(get_db)):
 
@@ -135,11 +125,9 @@ def delete_transaction(transaction_id: int, db: Session = Depends(get_db)):
 
     return {"mensagem": "Transação deletada com sucesso"}
 
-# Criação de categorias personalizadas
 @app.post("/categories")
 def create_category(category: schemas.CategoryCreate, db: Session = Depends(get_db)):
 
-      # normalização
     name = category.name.strip().lower().capitalize()
 
     existing = db.query(models.Category).filter(models.Category.name == name).first()
@@ -173,13 +161,10 @@ def create_default_categories(db: Session):
 
     db.commit()
 
-# listar categorias criadas
 @app.get("/categories")
 def get_categories(db: Session = Depends(get_db)):
     return db.query(models.Category).all()
 
-
-# Métodos de consulta
 @app.get("/balance")
 def get_balance(db: Session = Depends(get_db)):
 
@@ -210,7 +195,6 @@ def balance_by_category(db: Session = Depends(get_db)):
     result = {}
 
     for t in transactions:
-        # ignora receitas
         if t.type != "expense":
             continue
 
@@ -220,7 +204,7 @@ def balance_by_category(db: Session = Depends(get_db)):
             result[category_name] = 0
 
         result[category_name] += t.amount
-
+        
     return result
 
 @app.on_event("startup")

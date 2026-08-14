@@ -1,7 +1,6 @@
-from sqlalchemy import Column, Float, Integer, String, ForeignKey # Importando os tipos de dados SQLAlchemy
+from sqlalchemy import Column, Float, Integer, String, ForeignKey
 from .database import Base
 
-# importando o relacionamento entre tabelas, para que seja possivel categorização.
 from sqlalchemy.orm import relationship
 
 class Transaction(Base):
@@ -12,7 +11,7 @@ class Transaction(Base):
     amount = Column(Float)
     type = Column(String)
 
-    category_id = Column(Integer, ForeignKey("categories.id")) # Chave estrangeira para a tabela de categorias(cada transacação agora aponta pra uma categoria)
+    category_id = Column(Integer, ForeignKey("categories.id"))
 
     category = relationship("Category", back_populates="transactions")
 
